@@ -1,6 +1,6 @@
 // Keeps the app itself available without a connection. Train data is never cached here:
 // a stale time is worse than no time, so saved trains show their last known times inside the app.
-const VERSION = 'milepost-1.0.1';
+const VERSION = 'milepost-1.0.2';
 
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
@@ -14,7 +14,9 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Ask the network directly. The browser's own cache may still hold the previous version.
+  const fresh = SHELL.map((url) => new Request(url, { cache: 'reload' }));
+  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
