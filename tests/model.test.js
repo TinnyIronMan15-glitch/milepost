@@ -266,6 +266,7 @@ test('tidies real operator names', () => {
   assert.equal(operatorName('OEBB Personenverkehr AG Kundenservice'), 'ÖBB');
   assert.equal(operatorName('Magyar Allamvasutak'), 'MÁV');
   assert.equal(operatorName('SNCF VOYAGEURS'), 'SNCF');
+  assert.equal(operatorName('中国国家铁路集团有限公司'), 'China Railway');
   assert.equal(operatorName('VIA Rail'), 'VIA Rail');
 });
 

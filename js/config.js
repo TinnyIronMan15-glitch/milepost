@@ -1,6 +1,6 @@
 export const APP = {
   name: 'Milepost',
-  version: '1.0.2',
+  version: '1.0.3',
   // Public code and contact point. The Transitous usage policy asks for both.
   sourceUrl: 'https://github.com/TinnyIronMan15-glitch/milepost',
 };

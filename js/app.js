@@ -1,4 +1,4 @@
-import { html, render, useEffect, useErrorBoundary } from '../vendor/preact-htm.js';
+import { html, render, useEffect, useErrorBoundary, useLayoutEffect, useRef } from '../vendor/preact-htm.js';
 import { catchUp } from './track.js';
 import { Icon, Notice, hrefFor, useRoute } from './ui.js';
 import { AboutView } from './views/about.js';
@@ -37,6 +37,10 @@ function View({ route }) {
 function App() {
   const route = useRoute();
   const [crash, reset] = useErrorBoundary();
+  const main = useRef(null);
+
+  // Every screen opens at its top.
+  useLayoutEffect(() => { main.current?.querySelector('.scroll')?.scrollTo(0, 0); }, [location.hash]);
 
   useEffect(() => {
     catchUp();
@@ -50,7 +54,7 @@ function App() {
 
   return html`
     <div class="app">
-      <main class="main">
+      <main class="main" ref=${main}>
         ${crash
           ? html`<div class="scroll"><${Notice} title="This screen stopped working"
               action=${html`<button class="primary" onClick=${() => { reset(); location.hash = '#/'; }}>Back to Find</button>`}>
@@ -69,6 +73,12 @@ function App() {
 render(html`<${App}/>`, document.getElementById('root'));
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  // A new version takes over while the app opens. Reload once so it shows straight away.
+  const updating = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (updating && !reloaded) { reloaded = true; location.reload(); }
+  });
   navigator.serviceWorker.register('sw.js').catch(() => { /* the app still works online */ });
 }
 navigator.storage?.persist?.().catch?.(() => {});

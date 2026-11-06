@@ -39,6 +39,7 @@ const OPERATOR_NAMES = [
   [/^magyar allamvasutak/i, 'MÁV'],
   [/^ceske drahy/i, 'České dráhy'],
   [/^sncf\b/i, 'SNCF'],
+  [/^中国国家铁路/, 'China Railway'],
 ];
 
 export function operatorName(name) {
