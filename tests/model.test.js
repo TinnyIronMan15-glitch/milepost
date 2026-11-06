@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   decodePolyline, haversineKm, simplifyLine, stopDistances, parseItinerary, parseTrainLeg, trainStatus, withFullRun,
   fromStop, toStopOf, estimatePosition, positionCoord, formatDuration, stationTimeToUtc, tripFacts, onTimeSummary,
-  passportStats, serviceKey, trainName, transferRating, clockAt, timeParts, nextMilepost, manualTrain, flag, ridePoints,
+  passportStats, serviceKey, trainName, trainLabel, trainKind, transferRating, clockAt, timeParts, nextMilepost, manualTrain, flag, ridePoints,
+  cleanStation, operatorName,
 } from '../js/model.js';
 import { serviceInfo } from '../js/services.js';
 
@@ -248,6 +249,42 @@ test('a logged trip estimates its length and is marked approximate', () => {
   assert.ok(f.km > 230 && f.km < 280, String(f.km));
 });
 
+// These names were all returned by the live service.
+test('tidies real station names', () => {
+  assert.equal(cleanStation('NEW DELHI,  - '), 'New Delhi');
+  assert.equal(cleanStation('TORONTO - UNION STATION TRAIN'), 'Toronto - Union Station');
+  assert.equal(cleanStation('NEW YORK PENN STATION'), 'New York Penn Station');
+  assert.equal(cleanStation('KYOTO-KAWARAMACHI'), 'Kyoto-Kawaramachi');
+  assert.equal(cleanStation('Praha hl.n.'), 'Praha hl.n.');
+  assert.equal(cleanStation('Wien Hauptbahnhof'), 'Wien Hauptbahnhof');
+  assert.equal(cleanStation('Tōkyō'), 'Tōkyō');
+  assert.equal(cleanStation('東京'), '東京');
+  assert.equal(cleanStation('  '), 'Unknown stop');
+});
+
+test('tidies real operator names', () => {
+  assert.equal(operatorName('OEBB Personenverkehr AG Kundenservice'), 'ÖBB');
+  assert.equal(operatorName('Magyar Allamvasutak'), 'MÁV');
+  assert.equal(operatorName('SNCF VOYAGEURS'), 'SNCF');
+  assert.equal(operatorName('VIA Rail'), 'VIA Rail');
+});
+
+test('names real trains clearly', () => {
+  const name = (over) => trainName({ display: '', number: '', line: '', lineLong: '', category: '', operator: '', ...over });
+  assert.equal(name({ display: 'VIA Rail', number: '62', line: 'VIA Rail', operator: 'VIA Rail' }), 'VIA Rail 62');
+  assert.equal(name({ display: '67', number: '67', operator: 'Amtrak' }), 'Amtrak 67');
+  assert.equal(name({ display: 'RJ 258', number: 'RJ 258', operator: 'České dráhy' }), 'RJ 258');
+  assert.equal(name({ display: 'TGV INOUI 6641', number: '6641', operator: 'SNCF' }), 'TGV INOUI 6641');
+  assert.equal(name({ display: 'のぞみ357号', operator: 'JR' }), 'のぞみ357号');
+  assert.equal(name({ display: 'FR', line: 'Paris-Gare-de-Lyon/Milano Centrale', operator: 'Trenitalia' }), 'Trenitalia FR');
+  assert.equal(name({ display: '20452', line: '20452', operator: 'Indian Railways' }), 'Indian Railways 20452');
+  assert.equal(name({ operator: 'Some Rail' }), 'Some Rail');
+  assert.equal(trainLabel({ display: 'VIA Rail', number: '62', operator: 'VIA Rail' }), 'Train 62');
+  assert.equal(trainLabel({ display: 'RJ 258', number: 'RJ 258', operator: 'České dráhy' }), 'RJ 258');
+  assert.equal(trainKind({ mode: 'REGIONAL_RAIL', operator: 'Indian Railways' }), 'Train');
+  assert.equal(trainKind({ mode: 'REGIONAL_RAIL', operator: 'GO Transit' }), 'Regional');
+});
+
 test('flags', () => {
   assert.equal(flag('ca'), '🇨🇦');
   assert.equal(flag(''), '');
@@ -256,7 +293,12 @@ test('flags', () => {
 
 test('service facts', () => {
   assert.equal(serviceInfo({ display: 'ICE 123', operator: 'DB Fernverkehr' }).name, 'ICE');
-  assert.equal(serviceInfo({ display: 'Nozomi 5', operator: 'JR Central', stops: [{ tz: 'Asia/Tokyo' }] }).name, 'Shinkansen');
+  assert.equal(serviceInfo({ display: 'のぞみ357号', operator: 'JR', mode: 'HIGHSPEED_RAIL', stops: [{ tz: 'Asia/Tokyo' }] }).name, 'Shinkansen');
+  assert.equal(serviceInfo({ display: 'JJ', operator: 'JR East', mode: 'REGIONAL_RAIL', stops: [{ tz: 'Asia/Tokyo' }] }), null);
+  assert.equal(serviceInfo({ display: 'RJ 258', operator: 'České dráhy' }).name, 'Railjet');
+  assert.equal(serviceInfo({ display: 'RJ 1030', operator: 'RegioJet a.s.' }), null);
+  assert.equal(serviceInfo({ display: 'FR', operator: 'Trenitalia' }).name, 'Frecciarossa');
+  assert.equal(serviceInfo({ display: 'FR', operator: 'Other Rail' }), null);
   assert.equal(serviceInfo({ number: 'G1', operator: 'China Railway', stops: [{ tz: 'Asia/Shanghai' }] }).speed, 350);
   assert.equal(serviceInfo({ number: 'G1', operator: 'Local Rail', stops: [{ tz: 'Europe/Paris' }] }), null);
   assert.equal(serviceInfo({ display: 'Line 3', operator: 'NJ Transit' }), null);

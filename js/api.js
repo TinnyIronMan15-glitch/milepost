@@ -1,5 +1,5 @@
 import { API_BASE, DAILY_SEARCH_LIMIT } from './config.js';
-import { RAIL_MODES, parseItinerary, parseTrainLeg, tripLeg } from './model.js';
+import { RAIL_MODES, cleanStation, haversineKm, parseItinerary, parseTrainLeg, tripLeg } from './model.js';
 
 const MODES = RAIL_MODES.join(',');
 const LANGUAGE = 'en';
@@ -76,15 +76,28 @@ function countSearch() {
 
 export async function searchStations(text, signal) {
   const matches = await get('/v1/geocode', { text, type: 'STOP', mode: MODES, numResults: 10, language: LANGUAGE }, { signal, ttl: 3600 });
-  return matches.filter((m) => m.type === 'STOP').map((m) => ({
+  const stations = matches.filter((m) => m.type === 'STOP').map((m) => ({
     id: m.id,
-    name: m.name,
+    name: cleanStation(m.name),
     lat: m.lat,
     lon: m.lon,
     tz: m.tz || '',
     country: m.country || '',
     area: (m.areas || []).find((a) => a.default)?.name || m.areas?.[0]?.name || '',
   }));
+  return uniqueStations(stations);
+}
+
+const plainName = (s) => s.normalize('NFD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+// Several feeds can list the same station. Same name in the same place counts as one.
+export function uniqueStations(stations) {
+  const kept = [];
+  for (const s of stations) {
+    const same = kept.some((k) => plainName(k.name) === plainName(s.name) && haversineKm([k.lat, k.lon], [s.lat, s.lon]) < 1);
+    if (!same) kept.push(s);
+  }
+  return kept;
 }
 
 export async function planJourneys({ from, to, time, cursor }, signal) {

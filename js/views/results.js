@@ -1,11 +1,11 @@
 import { html, useEffect, useMemo, useState } from '../../vendor/preact-htm.js';
 import { planJourneys } from '../api.js';
 import {
-  dayLabel, formatDuration, fromStop, kindLabel, minutesBetween, toStopOf, trainName, trainStatus, transferMinutes, transferRating,
+  dayLabel, formatDuration, fromStop, minutesBetween, timeParts, toStopOf, trainKind, trainLabel, trainName, trainStatus, transferMinutes, transferRating,
 } from '../model.js';
 import { addTrip, findTrip, useStore } from '../store.js';
 import {
-  Clock, DataCredit, Icon, Loading, Notice, StopTime, Status, ViewHeader, go, hrefFor, plural, session, trainKey, useNow,
+  Clock, DataCredit, Loading, Notice, StopTime, Status, ViewHeader, go, plural, session, trainKey, useNow, usePrefs,
 } from '../ui.js';
 
 export function openTrain(train) {
@@ -45,11 +45,13 @@ function changeText(journey) {
   return `${plural(journey.changes, 'change')} at ${places.join(', ')}`;
 }
 
-function JourneyRow({ journey, now }) {
+const journeyDay = (j) => dayLabel(j.start, fromStop(j.trains[0]).tz);
+
+function JourneyRow({ journey, now, showDay }) {
   const first = journey.trains[0], last = journey.trains[journey.trains.length - 1];
   const from = fromStop(first), to = toStopOf(last);
   const status = trainStatus(journey.cancelled ? { ...first, cancelled: true } : first, now);
-  const names = journey.trains.map(trainName).join(', ');
+  const names = journey.trains.map(trainLabel).join(', ');
   return html`
     <li>
       <button class="journey" onClick=${() => openJourney(journey)}>
@@ -64,7 +66,7 @@ function JourneyRow({ journey, now }) {
           <span>${names}</span>
         </div>
         <div class="journey-foot">
-          <span>${changeText(journey)}</span>
+          <span>${showDay ? `${journeyDay(journey)}, ` : ''}${changeText(journey)}</span>
           <${Status} status=${status}/>
         </div>
       </button>
@@ -127,8 +129,10 @@ export function ResultsView({ q }) {
   }, [data.items, sort, directOnly]);
 
   const hasChanges = data.items.some((i) => i.changes);
-  const title = `${q.fn || 'From'} to ${q.tn || 'to'}`;
-  const sub = dayLabel(q.at, q.tz);
+  const title = `${q.fn || 'Departure'} to ${q.tn || 'arrival'}`;
+  const prefs = usePrefs();
+  const from = timeParts(q.at, q.tz, prefs.hour12);
+  const sub = `Leaving from ${dayLabel(q.at, q.tz)}, ${from.clock}${from.suffix}`;
 
   return html`
     <div class="scroll">
@@ -152,7 +156,15 @@ export function ResultsView({ q }) {
           ${hasChanges ? html`<button class="chip" aria-pressed=${directOnly} onClick=${() => setDirectOnly(!directOnly)}>Direct only</button>` : null}
         </div>
         ${data.previous ? html`<button class="pagebtn" disabled=${!!paging} onClick=${() => page('earlier')}>${paging === 'earlier' ? 'Loading' : 'Earlier trains'}</button>` : null}
-        <ul class="journeys">${shown.map((j) => html`<${JourneyRow} key=${j.id} journey=${j} now=${now}/>`)}</ul>
+        <ul class="journeys">
+          ${shown.map((j, i) => {
+            const byDay = sort === 'soonest';
+            const newDay = byDay && (i === 0 || journeyDay(j) !== journeyDay(shown[i - 1]));
+            return html`
+              ${newDay ? html`<li class="dayhead" key=${`day-${journeyDay(j)}`}><h2>${journeyDay(j)}</h2></li>` : null}
+              <${JourneyRow} key=${j.id} journey=${j} now=${now} showDay=${!byDay}/>`;
+          })}
+        </ul>
         ${directOnly && !shown.length ? html`<p class="hint">None of these are direct. Turn off Direct only, or load later trains.</p>` : null}
         ${data.pageError ? html`<p class="hint">${data.pageError}</p>` : null}
         ${data.next ? html`<button class="pagebtn" disabled=${!!paging} onClick=${() => page('later')}>${paging === 'later' ? 'Loading' : 'Later trains'}</button>` : null}
@@ -182,7 +194,7 @@ export function JourneyView({ q }) {
           return html`
             <li key=${t.tripId + i}>
               <button class="leg" onClick=${() => openTrain(t)}>
-                <span class="leg-name"><b>${trainName(t)}</b><span>${t.operator || 'Operator not listed'} ${kindLabel(t.mode).toLowerCase()}</span></span>
+                <span class="leg-name"><b>${trainName(t)}</b><span>${t.operator || 'Operator not listed'}, ${trainKind(t).toLowerCase()}</span></span>
                 <span class="leg-row"><${Clock} iso=${from.dep} tz=${from.tz}/><span>${from.name}</span></span>
                 <span class="leg-row"><${Clock} iso=${to.arr} tz=${to.tz}/><span>${to.name}</span></span>
                 <${Status} status=${trainStatus(t, now)}/>

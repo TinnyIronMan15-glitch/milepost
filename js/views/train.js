@@ -2,8 +2,8 @@ import { html, useEffect, useState } from '../../vendor/preact-htm.js';
 import { countryAt, fetchRun } from '../api.js';
 import { MapView } from '../mapview.js';
 import {
-  ON_TIME_LIMIT_MIN, dayLabel, estimatePosition, formatDuration, fromStop, kindLabel, onTimeSummary, parseTrainLeg, positionCoord,
-  ridePoints, serviceKey, toStopOf, trainName, trainStatus, tripFacts, withFullRun,
+  ON_TIME_LIMIT_MIN, dayLabel, estimatePosition, formatDuration, fromStop, onTimeSummary, parseTrainLeg, positionCoord,
+  ridePoints, serviceKey, toStopOf, trainKind, trainName, trainStatus, tripFacts, withFullRun,
 } from '../model.js';
 import { serviceInfo } from '../services.js';
 import { addTrip, findTrip, isWatched, removeTrip, runsFor, saveFailed, toggleWatch, tripById, updateTrip, useStore } from '../store.js';
@@ -91,9 +91,9 @@ function TripFacts({ train, units }) {
       <table class="details">
         <tbody>
           <tr><th scope="row">Operator</th><td>${train.operator || 'Not listed'}</td></tr>
-          <tr><th scope="row">Train type</th><td>${kindLabel(train.mode)}</td></tr>
+          <tr><th scope="row">Train type</th><td>${trainKind(train)}</td></tr>
           ${train.number ? html`<tr><th scope="row">Train number</th><td>${train.number}</td></tr>` : null}
-          ${train.line && train.line !== train.number ? html`<tr><th scope="row">Line</th><td>${train.line}</td></tr>` : null}
+          ${train.line && ![train.number, train.operator, train.display].includes(train.line) ? html`<tr><th scope="row">Line</th><td>${train.line}</td></tr>` : null}
           ${train.lineLong ? html`<tr><th scope="row">Route</th><td>${train.lineLong}</td></tr>` : null}
           <tr><th scope="row">Runs to</th><td>${train.terminus}</td></tr>
         </tbody>
@@ -239,7 +239,7 @@ export function TrainView({ q }) {
       <div class="trainsheet">
         <header class="trainhead">
           <h1>${trainName(train)}</h1>
-          <p>${train.operator || 'Operator not listed'}, ${kindLabel(train.mode).toLowerCase()} to ${train.terminus}</p>
+          <p>${train.operator || 'Operator not listed'}, ${trainKind(train).toLowerCase()} to ${train.terminus}</p>
         </header>
 
         <div class="statusband">

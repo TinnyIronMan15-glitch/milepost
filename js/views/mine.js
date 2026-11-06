@@ -1,6 +1,6 @@
 import { html, useEffect, useState } from '../../vendor/preact-htm.js';
 import { dayLabel, fromStop, onTimeSummary, toStopOf, trainName, trainStatus } from '../model.js';
-import { toggleWatch, useStore } from '../store.js';
+import { removeWatch, useStore } from '../store.js';
 import { catchUp } from '../track.js';
 import { Clock, Icon, Notice, Status, go, hrefFor, plural, useNow } from '../ui.js';
 
@@ -70,10 +70,10 @@ export function MineView() {
               const s = onTimeSummary(store.runs[w.key] || []);
               return html`
                 <li key=${w.key}>
-                  <span><b>${w.operator ? `${w.operator} ` : ''}${w.name}</b>
+                  <span><b>${w.name}</b>
                     <small>${s.total ? `${s.percent === null ? 'No runs completed' : `${s.percent}% on time`} over ${plural(s.total, 'run')}` : 'No runs logged yet'}</small>
                   </span>
-                  <button class="iconbtn" aria-label=${`Stop watching ${w.name}`} onClick=${() => toggleWatch({ operator: w.operator, number: w.number, display: w.display, line: w.line, stops: [{ schedDep: w.arrIso, tz: w.tz }] })}><${Icon} name="close" size=${20}/></button>
+                  <button class="iconbtn" aria-label=${`Stop watching ${w.name}`} onClick=${() => removeWatch(w.key)}><${Icon} name="close" size=${20}/></button>
                 </li>`;
             })}
           </ul>

@@ -2,7 +2,7 @@
 // while the app is open, and only records what the operator actually published.
 import { fetchArrivals, fetchRun } from './api.js';
 import {
-  clockAt, dayKey, delayMinutes, fromStop, minutesBetween, serviceKey, stationTimeToUtc, toStopOf, withFullRun,
+  clockAt, dayKey, delayMinutes, fromStop, minutesBetween, operatorName, serviceKey, stationTimeToUtc, toStopOf, withFullRun,
 } from './model.js';
 import { getState, logRun, markWatchChecked, updateTrip } from './store.js';
 
@@ -44,7 +44,7 @@ export async function refreshSavedTrains(now = Date.now()) {
 }
 
 const sameService = (watch, stopTime) =>
-  (stopTime.agencyName || '') === (watch.operator || '') &&
+  operatorName(stopTime.agencyName) === (watch.operator || '') &&
   (watch.number ? stopTime.tripShortName === watch.number : stopTime.displayName === watch.display || stopTime.routeShortName === watch.line);
 
 async function checkWatch(watch, now) {

@@ -1,6 +1,6 @@
 // Everything the person saves lives on their own phone, in this one record.
 import { useEffect, useState } from '../vendor/preact-htm.js';
-import { fromStop, serviceKey, simplifyLine, toStopOf } from './model.js';
+import { fromStop, serviceKey, simplifyLine, toStopOf, trainName } from './model.js';
 
 const KEY = 'milepost.v1';
 const MAX_RUNS = 120;
@@ -126,8 +126,7 @@ export function toggleWatch(train) {
   const end = train.stops[train.stops.length - 1];
   const watch = {
     key,
-    name: train.display || train.number || train.line || 'Train',
-    fullName: '',
+    name: trainName(train),
     operator: train.operator,
     number: train.number,
     display: train.display,
@@ -140,6 +139,10 @@ export function toggleWatch(train) {
   };
   commit({ ...state, watches: [...state.watches, watch] });
   return true;
+}
+
+export function removeWatch(key) {
+  commit({ ...state, watches: state.watches.filter((w) => w.key !== key) });
 }
 
 export function markWatchChecked(key) {

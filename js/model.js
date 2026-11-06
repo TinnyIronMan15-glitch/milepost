@@ -18,6 +18,34 @@ const KIND = {
 
 export const kindLabel = (mode) => KIND[mode] || 'Train';
 
+// Some feeds file every train under one type, so that type says nothing about the train.
+export function trainKind(t) {
+  return /indian railways/i.test(t.operator || '') ? 'Train' : kindLabel(t.mode);
+}
+
+/* ---------- tidying names ---------- */
+
+const titleCase = (s) => s.toLowerCase().replace(/(^|[\s\-/(.'’])(\p{L})/gu, (_, before, letter) => before + letter.toUpperCase());
+
+// Feeds shout, and some leave separators behind: "NEW DELHI,  - ", "TORONTO - UNION STATION TRAIN".
+export function cleanStation(name) {
+  let s = (name || '').replace(/\s+/g, ' ').replace(/[\s,\-–]+$/u, '').trim();
+  if (/[A-Z]/.test(s) && !/[a-z]/.test(s)) s = titleCase(s);
+  return s.replace(/ Train$/, '') || 'Unknown stop';
+}
+
+const OPERATOR_NAMES = [
+  [/^oebb\b/i, 'ÖBB'],
+  [/^magyar allamvasutak/i, 'MÁV'],
+  [/^ceske drahy/i, 'České dráhy'],
+  [/^sncf\b/i, 'SNCF'],
+];
+
+export function operatorName(name) {
+  const raw = (name || '').trim();
+  return OPERATOR_NAMES.find(([test]) => test.test(raw))?.[1] || raw;
+}
+
 /* ---------- geometry ---------- */
 
 export function decodePolyline(encoded, precision = 6) {
@@ -147,7 +175,7 @@ function toStop(place) {
   return {
     id: place.stopId || '',
     parent: place.parentId || '',
-    name: place.name || 'Unknown stop',
+    name: cleanStation(place.name),
     lat: place.lat,
     lon: place.lon,
     tz: place.tz || '',
@@ -199,13 +227,13 @@ export function parseTrainLeg(leg) {
     line,
     lineLong: leg.routeLongName || '',
     category,
-    operator: leg.agencyName || '',
+    operator: operatorName(leg.agencyName),
     operatorUrl: httpOnly(leg.agencyUrl),
     routeUrl: httpOnly(leg.routeUrl),
     mode: leg.mode,
     color: /^[0-9a-f]{6}$/i.test(leg.routeColor || '') ? leg.routeColor : '',
     headsign: leg.headsign || '',
-    terminus: leg.tripTo?.name || stops[stops.length - 1].name,
+    terminus: leg.tripTo?.name ? cleanStation(leg.tripTo.name) : stops[stops.length - 1].name,
     realTime: !!leg.realTime,
     cancelled: !!leg.cancelled,
     alerts: toAlerts(leg.alerts, leg.from?.alerts, leg.to?.alerts),
@@ -272,12 +300,24 @@ export function tripLeg(itinerary, tripId) {
 /* ---------- names ---------- */
 
 export function trainName(t) {
-  if (t.display && !/^\d+$/.test(t.display)) return t.display;
-  const num = t.number || t.display;
+  const shown = t.display || '';
   const op = t.operator || '';
-  if (t.category && num) return `${t.category} ${num}`;
-  if (op && num) return `${op} ${num}`;
-  return t.line || t.lineLong || num || op || 'Train';
+  if (/\d/.test(shown) && !/^\d+$/.test(shown)) return shown; // "RJ 258", "TGV INOUI 6641"
+  const num = /^\d+$/.test(shown) ? shown : t.number;
+  if (/^\d+$/.test(shown) || !shown) {
+    if (num) return `${t.category || op || 'Train'} ${num}`;
+    return t.line || t.lineLong || op || 'Train';
+  }
+  if (num && num !== shown) return `${shown} ${num}`; // "VIA Rail 62"
+  if (op && op !== shown) return `${op} ${shown}`; // "Trenitalia FR"
+  return t.line || shown;
+}
+
+// For a row that already names the operator: "Train 62" instead of "VIA Rail 62".
+export function trainLabel(t) {
+  const name = trainName(t);
+  const op = t.operator || '';
+  return op && name.startsWith(`${op} `) ? `Train ${name.slice(op.length + 1)}` : name;
 }
 
 // Identifies "the same train on different days".
