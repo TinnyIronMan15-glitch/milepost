@@ -152,8 +152,8 @@ function OnTimeRecord({ train }) {
         </dl>
         <${RunBars} runs=${runs}/>
         <p class="block-note">From runs this phone has logged. On time means within ${ON_TIME_LIMIT_MIN} minutes at the last stop.</p>` : null}
-      ${!runs.length && canLog ? html`<p class="block-text">Nobody publishes train punctuality worldwide, so Milepost builds this record itself. Watch this train and each time you open the app it logs yesterday's and today's runs.</p>` : null}
-      ${!runs.length && !canLog ? html`<p class="block-text">This train has no live data right now, so there is nothing to log yet. If the operator publishes live times, watching it will build a record from those runs.</p>` : null}
+      ${!runs.length && canLog ? html`<p class="block-text">Nobody publishes train punctuality worldwide, so Milepost builds this record itself. Watch this train, then open the app the day it runs, after it arrives. Live times for finished trains don't last, so a day you skip stays unlogged.</p>` : null}
+      ${!runs.length && !canLog ? html`<p class="block-text">This train has no live data right now, so there is nothing to log yet. If the operator publishes live times close to departure, watching it will build a record.</p>` : null}
       <button class=${`togglebtn ${watching ? 'is-on' : ''}`} aria-pressed=${watching} onClick=${() => toggleWatch(train)}>
         <${Icon} name=${watching ? 'check' : 'watch'} size=${20}/>${watching ? 'Watching this train' : 'Watch this train'}
       </button>

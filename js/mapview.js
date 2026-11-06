@@ -1,7 +1,7 @@
 // A map that always shows something. A drawn sketch of the route sits underneath, and the real
 // map fades in over it when the map library and tiles load, so no signal never means a blank panel.
 import { html, useEffect, useMemo, useRef, useState } from '../vendor/preact-htm.js';
-import { LINKS, MAP_STYLES } from './config.js';
+import { MAP_STYLES } from './config.js';
 
 let library;
 
@@ -76,7 +76,7 @@ export function MapView({ lines = [], faint = [], marks = [], train = null, glob
         style: isDark() ? MAP_STYLES.dark : MAP_STYLES.light,
         bounds: [[w, s], [e, n]],
         fitBoundsOptions: { padding: { top: 44, bottom: 44, left: 44, right: 44 }, maxZoom: 11 },
-        attributionControl: { compact: true, customAttribution: `<a href="${LINKS.mapTiles}" target="_blank" rel="noopener">OpenFreeMap</a>` },
+        attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,
         touchPitch: false,

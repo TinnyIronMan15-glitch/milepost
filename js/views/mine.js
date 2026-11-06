@@ -64,7 +64,7 @@ export function MineView() {
       ${store.watches.length ? html`
         <section class="minesection">
           <h2>Trains you are watching</h2>
-          <p class="block-note">Open the app to log each train's latest runs.</p>
+          <p class="block-note">Open the app after a watched train arrives, the same day, to log its run.</p>
           <ul class="watchlist">
             ${store.watches.map((w) => {
               const s = onTimeSummary(store.runs[w.key] || []);

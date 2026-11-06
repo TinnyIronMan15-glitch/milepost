@@ -78,7 +78,7 @@ export function AboutView() {
         <ul class="plainlist">
           <li>Live delays appear only where the operator publishes them. Everywhere else you see timetable times.</li>
           <li>Train positions are estimated from the times.</li>
-          <li>There are no alerts while the app is closed, and on-time history only grows when you open it.</li>
+          <li>There are no alerts while the app is closed. On-time history only grows when you open the app the day a watched train runs.</li>
           <li>Coverage depends on open timetable data, so some operators and countries are missing.</li>
         </ul>
       </section>

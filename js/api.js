@@ -142,7 +142,7 @@ export async function fetchRunAsTrain(tripId, signal) {
 // Arrivals at a station around a time. Used to record how a watched train ran.
 export async function fetchArrivals({ stopId, time, windowSeconds }, signal) {
   const data = await get('/v6/stoptimes', {
-    stopId, time, arriveBy: true, window: windowSeconds, n: 60, mode: MODES, language: LANGUAGE, withAlerts: false,
+    stopId, time, arriveBy: true, window: windowSeconds, n: 1, mode: MODES, language: LANGUAGE, withAlerts: false,
   }, { signal, ttl: 300 });
   return data.stopTimes || [];
 }

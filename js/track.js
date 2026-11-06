@@ -4,10 +4,11 @@ import { fetchArrivals, fetchRun } from './api.js';
 import {
   clockAt, dayKey, delayMinutes, fromStop, minutesBetween, operatorName, serviceKey, stationTimeToUtc, toStopOf, withFullRun,
 } from './model.js';
-import { getState, logRun, markWatchChecked, updateTrip } from './store.js';
+import { getState, logRun, markWatchChecked, runsFor, updateTrip } from './store.js';
 
 const HOUR = 3600000;
-const WATCH_INTERVAL = 6 * HOUR;
+const WATCH_INTERVAL = HOUR / 2;
+const MAX_RUN_AGE = 18 * HOUR;
 const MAX_WATCH_CHECKS = 12;
 
 // A finished run with live data becomes one line of history.
@@ -47,21 +48,26 @@ const sameService = (watch, stopTime) =>
   operatorName(stopTime.agencyName) === (watch.operator || '') &&
   (watch.number ? stopTime.tripShortName === watch.number : stopTime.displayName === watch.display || stopTime.routeShortName === watch.line);
 
+// The data service keeps live times for finished trains only for a limited time, so a run has
+// to be logged soon after it ends. A run with no live data is skipped, never counted as on time.
 async function checkWatch(watch, now) {
   const clock = clockAt(watch.arrIso, watch.tz);
   const today = dayKey(new Date(now).toISOString(), watch.tz);
   const yesterday = dayKey(new Date(now - 24 * HOUR).toISOString(), watch.tz);
   for (const day of [yesterday, today]) {
-    const expected = stationTimeToUtc(day, clock, watch.tz);
-    if (+new Date(expected) > now - HOUR) continue;
-    const time = new Date(+new Date(expected) + 3 * HOUR).toISOString();
+    if (runsFor(watch.key).some((r) => r.date === day)) continue;
+    const expected = +new Date(stationTimeToUtc(day, clock, watch.tz));
+    if (expected > now || now - expected > MAX_RUN_AGE) continue;
+    const time = new Date(expected + 3 * HOUR).toISOString();
     const arrivals = await fetchArrivals({ stopId: watch.stopId, time, windowSeconds: 6 * 3600 });
-    const hit = arrivals.find((a) => sameService(watch, a) && Math.abs(minutesBetween(expected, a.place.scheduledArrival || a.place.arrival)) < 90);
+    const hit = arrivals.find((a) => sameService(watch, a) && Math.abs(minutesBetween(new Date(expected).toISOString(), a.place.scheduledArrival || a.place.arrival)) < 90);
     if (!hit || !hit.realTime) continue;
+    const gone = !!(hit.tripCancelled || hit.cancelled);
+    if (!gone && +new Date(hit.place.arrival) > now) continue;
     logRun(watch.key, {
       date: day,
-      delay: hit.tripCancelled || hit.cancelled ? 0 : Math.max(0, delayMinutes(hit.place.scheduledArrival, hit.place.arrival)),
-      cancelled: !!(hit.tripCancelled || hit.cancelled),
+      delay: gone ? 0 : Math.max(0, delayMinutes(hit.place.scheduledArrival, hit.place.arrival)),
+      cancelled: gone,
       stop: watch.stopName,
     });
   }
