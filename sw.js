@@ -1,6 +1,6 @@
 // Keeps the app itself available without a connection. Train data is never cached here:
 // a stale time is worse than no time, so saved trains show their last known times inside the app.
-const VERSION = 'milepost-1.0.4';
+const VERSION = 'milepost-1.0.5';
 
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',

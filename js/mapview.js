@@ -83,8 +83,10 @@ export function MapView({ lines = [], faint = [], marks = [], train = null, glob
       });
       map.touchZoomRotate.disableRotation();
       mapRef.current = map;
-      map.on('style.load', () => { if (globe) map.setProjection({ type: 'globe' }); });
-      map.on('load', () => {
+      // Draw as soon as the style is ready. The "load" event can fail to fire on the globe view,
+      // so the sketch gives way on the first idle moment or after a few seconds, whichever is first.
+      map.once('style.load', () => {
+        if (globe) map.setProjection({ type: 'globe' });
         const accent = cssVar('--brass');
         const shade = cssVar('--ground');
         const asLine = (coords) => ({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords.map(lonLat) } });
@@ -99,7 +101,9 @@ export function MapView({ lines = [], faint = [], marks = [], train = null, glob
           map.addSource('marks', { type: 'geojson', data: { type: 'FeatureCollection', features: marks.map((m) => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: lonLat(m) } })) } });
           map.addLayer({ id: 'marks', type: 'circle', source: 'marks', paint: { 'circle-radius': 5, 'circle-color': shade, 'circle-stroke-color': accent, 'circle-stroke-width': 2.5 } });
         }
-        if (!cancelled) setReady(true);
+        const show = () => { if (!cancelled) setReady(true); };
+        map.once('idle', show);
+        setTimeout(show, 3500);
       });
     }).catch(() => { /* the sketch stays */ });
     return () => {
